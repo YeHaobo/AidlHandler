@@ -106,7 +106,7 @@ public class MyService extends BaseAidlService {
           </intent-filter>
       </service>
 ```
-### 2、Service中发送广播
+### 3、Service中发送广播
 ```java
       doAccept("action","params");//客户端可以根据action来判断是否需要操作
 ```
@@ -132,7 +132,7 @@ public class MyService extends BaseAidlService {
         clientAidlConnector.connect();
 ```
 
-### 2、客户端远程调用
+### 2、远程调用
 ```java
 
       //串行调用
