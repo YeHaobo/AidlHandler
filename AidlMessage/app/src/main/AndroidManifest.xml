@@ -21,7 +21,7 @@
 
         <service android:name=".MyService" android:enabled="true" android:exported="true">
             <intent-filter>
-                <action android:name="MyService"/>
+                <action android:name="com.yhb.aidlmessage.MyService"/>
             </intent-filter>
         </service>
 

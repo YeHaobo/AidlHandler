@@ -14,9 +14,9 @@ public interface ServiceAidlPost {
      */
     void onewayPost(String action, String params, IServiceAidlCallback callback);
     /**
-     * 运行在当前binder线程
+     * 运行在当前service线程
      * callback需要与客户端远程调用所在的线程同步，所以尽量不要在其他线程中使用callback进行回调
-     * 尽量不要在该方法中执行耗时的操作
+     * 不要在该方法中执行耗时的操作
      */
     void uiPost(String action, String params, IServiceAidlCallback callback);
     /**

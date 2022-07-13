@@ -19,7 +19,7 @@ public class ServiceAidlCall extends IServiceAidlCall.Stub {
     /**接收客户端消息的实现接口*/
     private ServiceAidlPost serviceAidlPost;
 
-    /**可缓存线程池、无空闲线程则新建线程运行，有空闲则使用空闲线程，空闲60秒后将被回收*/
+    /**可缓存线程池、无空闲线程则新建线程运行，有空闲则使用空闲线程，内部空闲线程60秒后将被回收*/
     private ExecutorService cachedThreadPool;
 
     /**构造*/
@@ -88,7 +88,7 @@ public class ServiceAidlCall extends IServiceAidlCall.Stub {
     /**下发消息至客户端*/
     public void accept(String action, String params) throws RemoteException {
         Log.e(TAG,"accept");
-        synchronized (remoteCallbackList){//线程安全，需要加对象锁
+        synchronized (remoteCallbackList){//线程不安全，需要加对象锁
             int count = remoteCallbackList.beginBroadcast();
             for (int i = 0; i < count; i ++) {
                 IClientAidlCall call = remoteCallbackList.getBroadcastItem(i);
