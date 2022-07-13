@@ -71,7 +71,7 @@ public class MyService extends BaseAidlService {
     public void uiPost(String action, String params, IServiceAidlCallback callback) {
         Log.e("uiPost",Thread.currentThread().getName());
         try {
-            callback.onResult(200,"uiPost-result");
+            callback.onResult(200,"uiPost-result");//使用callback回调必须在当前线程
         } catch (RemoteException e) {
             e.printStackTrace();
         }
