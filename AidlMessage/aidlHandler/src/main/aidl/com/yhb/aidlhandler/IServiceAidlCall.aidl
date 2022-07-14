@@ -42,7 +42,7 @@ interface IServiceAidlCall {
 
     //注意：
     //在服务端使用回调发送广播时，客户端的回调（call）的实现所在的线程是由服务端调用时所在线程决定的。
-    //比如：在uiPost内部发送广播则回调至客户端UI线程，在asynPost内部发送广播则回调至客户端工作线程
+    //比如：客户端在UI线程同时远程调用uiPost和asynPost，服务端在uiPost内部使用doAccept发送会回调至客户端UI线程，而在asynPost内部使用则回调至客户端binder工作线程。
 
     //注册
     void register(IClientAidlCall call);

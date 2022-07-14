@@ -35,11 +35,11 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
                 .context(this)
                 .packageName("com.yhb.aidlmessage")//连接服务的包名
                 .serviceName("com.yhb.aidlmessage.MyService")//服务的name,也就是在AndroidManifest.xml内service中action标签的name属性
-                .connectResult(new ConnectResult() {//连接回调
+                .connectResult(new ConnectResult() {
                     @Override
                     public void connected(ClientAidlPoster poster) {
-                        //远程调用需要使用该发送者对象
-                        clientAidlPoster = poster;
+                        //已连接回调
+                        clientAidlPoster = poster;//远程调用需要使用该发送者对象
                     }
                     @Override
                     public boolean isReconnect() {
@@ -57,9 +57,10 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
     IClientAidlCall.Stub clientAidlCall = new IClientAidlCall.Stub() {
         @Override
         public void accept(String action, String params) throws RemoteException {
-            Log.e(TAG,"accept ThreadName: " + Thread.currentThread().getName());
             if(Looper.getMainLooper().getThread() == Thread.currentThread()){//判断是否在主线程
                 Toast.makeText(ClientActivity.this,"action: " + action + "\nparams: " + params,Toast.LENGTH_SHORT).show();
+            }else{
+                Log.e(TAG,"accept ThreadName: " + Thread.currentThread().getName());
             }
         }
     };
@@ -91,7 +92,7 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
                 clientAidlPoster.asynPost("asynPost", "{...}", new IServiceAidlCallback.Stub() {
                     @Override
                     public void onResult(final int code, final String params) throws RemoteException {
-                        //回调在工作线程
+                        //回调在binder工作线程
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -108,7 +109,7 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
 
     @Override
     protected void onDestroy() {
-        clientAidlConnector.disconnect();
+        clientAidlConnector.disconnect();//断开连接
         super.onDestroy();
     }
 
