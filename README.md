@@ -1,10 +1,7 @@
 # AidlHandler
 
 AidlHandler是基于AIDL的Android多进程通讯解决方案。  
-1、支持多客户端并发。  
-2、支持客户端远程同步调用、异步调用、队列式调用服务端。  
-3、支持服务端主动向客户端发送消息，客户端需要先向服务端注册，服务端主动发起回调客户端所有已注册接口。  
-4、在使用当中服务端和客户端需要统一消息动作标识。为了良好的可拓展性，项目未使用固定的序列化实体类传参，所以实体参数需要通过JSON的方式传输和解析。
+支持多客户端连接和并发，客户端可以同步或异步的远程调用服务。支持服务端主动向客户端发送消息，客户端需要先向服务端注册，服务端根据需要主动发起广播，回调至客户端所有已注册接口。在使用过程中，服务端和客户端需要统一消息动作标识。为了良好的可拓展性，项目未使用固定的序列化实体类传参，所以实体参数需要通过JSON的方式传输和解析。 
 
 ***
 
@@ -24,7 +21,7 @@ AidlHandler是基于AIDL的Android多进程通讯解决方案。
   dependencies {
     ... ...
     implementation 'com.android.support:appcompat-v7:28.0.0'//AndroidX项目不用添加support-v7包
-    implementation 'com.github.YeHaobo:AidlHandler:1.0'
+    implementation 'com.github.YeHaobo:AidlHandler:1.1'
     ... ...
   }
 ```
@@ -38,59 +35,32 @@ AidlHandler是基于AIDL的Android多进程通讯解决方案。
 ```java
 public class MyService extends BaseAidlService {
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        Log.e("onCreate",Thread.currentThread().getName());
-    }
-
-    /**
-     * 1、可以处理耗时操作
-     * 2、串行执行，先进先出
-     */
-    @Override
-    public void onewayPost(String action, String params, IServiceAidlCallback callback) {
-        Log.e("onewayPost",Thread.currentThread().getName());
-        try {
-            Thread.sleep(7*1000);//模拟耗时
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        try {
-            callback.onResult(200,"onewayPost-result");
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-    }
-
     /**
      * 1、不能处理耗时操作
      * 2、使用callback回调必须在当前线程
      */
     @Override
     public void uiPost(String action, String params, IServiceAidlCallback callback) {
-        Log.e("uiPost",Thread.currentThread().getName());
         try {
-            callback.onResult(200,"uiPost-result");//使用callback回调必须在当前线程
+            callback.onResult(200,action + " is success");//使用callback回调必须在当前线程
         } catch (RemoteException e) {
             e.printStackTrace();
         }
     }
 
     /**
-     * 1、可以处理耗时操作
-     * 2、并行执行，异步回调
+     * 1、异步调用
+     * 2、可以处理耗时操作
      */
     @Override
     public void asynPost(String action, String params, IServiceAidlCallback callback) {
-        Log.e("asynPost",Thread.currentThread().getName());
         try {
             Thread.sleep(7*1000);//模拟耗时
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         try {
-            callback.onResult(200,"asynPost-result");
+            callback.onResult(200,action + " is success");
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -107,6 +77,8 @@ public class MyService extends BaseAidlService {
       </service>
 ```
 ### 3、Service中发送广播
+注意：在服务端使用回调发送广播时，客户端的call实现所在的线程是由服务端调用时所在线程决定的。   
+比如：客户端在UI线程同时远程调用uiPost和asynPost，服务端在uiPost内部发送广播则回调至客户端UI线程，而在asynPost内部发送广播则回调至客户端binder工作线程。   
 ```java
       doAccept("action","params");//客户端可以根据action来判断是否需要操作
 ```
@@ -118,12 +90,17 @@ public class MyService extends BaseAidlService {
                 .Builder()
                 .context(this)
                 .packageName("com.yhb.aidlmessage")//连接服务的包名
-                .serviceName("com.yhb.aidlmessage.MyService")//服务的name,也就是在AndroidManifest.xml中service标签下的name属性
-                .connectResult(new ConnectResult() {//连接回调
+                .serviceName("com.yhb.aidlmessage.MyService")//服务的name,也就是在AndroidManifest.xml内service中action标签的name属性
+                .connectResult(new ConnectResult() {
                     @Override
-                    public void onResult(ClientAidlPoster poster) {
-                        //远程调用需要使用该发送者对象
-                        clientAidlPoster = poster;
+                    public void connected(ClientAidlPoster poster) {
+                        //已连接回调
+                        clientAidlPoster = poster;//远程调用需要使用该发送者对象
+                    }
+                    @Override
+                    public boolean isReconnect() {
+                        //连接异常断开回调
+                        return true;//true:重连 false:不重连
                     }
                 })
                 .build();
@@ -135,43 +112,26 @@ public class MyService extends BaseAidlService {
 ### 2、远程调用
 ```java
 
-      //串行调用
-      clientAidlPoster.onewayPost("111", "aaaa", new IServiceAidlCallback.Stub() {
-          @Override
-          public void onResult(final int code, final String params) throws RemoteException {
-              //回调在工作线程
-              runOnUiThread(new Runnable() {
-                  @Override
-                  public void run() {
-                      Toast.makeText(ClientActivity.this,"onewayPost->onResult：{" + code + params + "}",Toast.LENGTH_SHORT).show();
-                  }
-              });
-              Log.e("onewayPost->onResult","ThreadName = "+Thread.currentThread().getName());
-          }
-      });
-
-      //UI线程同步调用
-      clientAidlPoster.uiPost("222", "bbbb", new IServiceAidlCallback.Stub() {
+      //同步调用
+      clientAidlPoster.uiPost("uiPost", "{...}", new IServiceAidlCallback.Stub() {
           @Override
           public void onResult(int code, String params) throws RemoteException {
-              //回调在当前UI线程
-              Toast.makeText(ClientActivity.this,"uiPost->onResult：{" + code + params + "}",Toast.LENGTH_SHORT).show();
-              Log.e("uiPost->onResult",Thread.currentThread().getName());
+              //回调在当前线程
+              Toast.makeText(ClientActivity.this,"code: " + code + "\nparams: " + params,Toast.LENGTH_SHORT).show();
           }
       });
 
       //异步调用
-      clientAidlPoster.asynPost("333", "cccc", new IServiceAidlCallback.Stub() {
+      clientAidlPoster.asynPost("asynPost", "{...}", new IServiceAidlCallback.Stub() {
           @Override
           public void onResult(final int code, final String params) throws RemoteException {
-              //回调在工作线程
+              //回调在binder工作线程
               runOnUiThread(new Runnable() {
                   @Override
                   public void run() {
-                      Toast.makeText(ClientActivity.this,"asynPost->onResult：{" + code + params + "}",Toast.LENGTH_SHORT).show();
+                      Toast.makeText(ClientActivity.this,"code: " + code + "\nparams: " + params,Toast.LENGTH_SHORT).show();
                   }
               });
-              Log.e("asynPost->onResult",Thread.currentThread().getName());
           }
       });
 ```
@@ -181,8 +141,11 @@ public class MyService extends BaseAidlService {
     IClientAidlCall.Stub clientAidlCall = new IClientAidlCall.Stub() {
         @Override
         public void accept(String action, String params) throws RemoteException {
-            //回调在工作线程
-            Log.e("accept",Thread.currentThread().getName());
+            if(Looper.getMainLooper().getThread() == Thread.currentThread()){//判断是否在主线程
+                Toast.makeText(ClientActivity.this,"action: " + action + "\nparams: " + params,Toast.LENGTH_SHORT).show();
+            }else{
+                Log.e(TAG,"accept ThreadName: " + Thread.currentThread().getName());
+            }
         }
     };
     
@@ -195,14 +158,18 @@ public class MyService extends BaseAidlService {
 ```
 
 ### 4、断开连接
-提示：在使用完成后建议断开连接，减少服务端资源占用
+提示：在使用完成后建议调用断开连接，减少服务端资源占用
 ```java
-    clientAidlConnector.disconnect();
+    @Override
+    protected void onDestroy() {
+        clientAidlConnector.disconnect();//断开连接
+        super.onDestroy();
+    }
 ```
 
 
 ## 问题及其他
-1、依赖的包经过jitpack编译后可能丢失源码中的注释，若要看注释请打开源码查阅。  
+1、依赖的包经过jitpack编译后可能丢失源码中的注释，若查看详细注释请在Git上的源码查阅。    
 2、若客户端无法连接，请确认服务端进程是否未启动或被杀死。  
 
 
