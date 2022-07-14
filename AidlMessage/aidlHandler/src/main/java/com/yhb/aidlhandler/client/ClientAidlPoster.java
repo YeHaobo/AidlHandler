@@ -36,21 +36,8 @@ public class ClientAidlPoster {
     }
 
     /**发送消息*/
-    public void onewayPost(String action, String params, IServiceAidlCallback.Stub callback){
-        Log.e(TAG,"onewayPost");
-        if(isConnect()){
-            try{
-                iServiceAidlCall.onewayPost(action, params, callback);
-            }catch (RemoteException e){
-                e.printStackTrace();
-                Log.e(TAG,e.toString());
-            }
-        }
-    }
-
-    /**发送消息*/
     public void uiPost(String action, String params, IServiceAidlCallback.Stub callback){
-        Log.e(TAG,"uiPost");
+        Log.e(TAG,"uiPost： " + action + "   " + params);
         if(isConnect()){
             try{
                 iServiceAidlCall.uiPost(action, params, callback);
@@ -63,7 +50,7 @@ public class ClientAidlPoster {
 
     /**发送消息*/
     public void asynPost(String action, String params, IServiceAidlCallback.Stub callback){
-        Log.e(TAG,"asynPost");
+        Log.e(TAG,"asynPost： " + action + "   " + params);
         if(isConnect()){
             try{
                 iServiceAidlCall.asynPost(action, params, callback);

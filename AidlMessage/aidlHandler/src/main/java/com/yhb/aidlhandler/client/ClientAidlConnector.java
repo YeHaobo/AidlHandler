@@ -15,16 +15,12 @@ public class ClientAidlConnector {
 
     /**上下文*/
     private Context context;
-
     /**包名*/
     private String packageName;
-
     /**服务名*/
     private String serviceName;
-
     /**连接回调*/
     private ConnectResult connectResult;
-
     /**已绑定服务端接口*/
     private IServiceAidlCall iServiceAidlCall;
 
@@ -80,20 +76,21 @@ public class ClientAidlConnector {
     private ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            Log.e(TAG,"The service status is connected");
-            iServiceAidlCall = IServiceAidlCall.Stub.asInterface(service);
+            if(service == null) return;
+            iServiceAidlCall = IServiceAidlCall.Stub.asInterface(service);//binder接口转换
             try {
                 iServiceAidlCall.asBinder().linkToDeath(deathRecipient,0);//设置死亡代理
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
             if(connectResult != null){
-                connectResult.onResult(new ClientAidlPoster(iServiceAidlCall));
+                connectResult.connected(new ClientAidlPoster(iServiceAidlCall));//连接完成回调
             }
+            Log.e(TAG,"\"" + serviceName + "\" is connected");
         }
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            Log.e(TAG,"The service status is disconnected");
+            Log.e(TAG,"\"" + serviceName + "\" is disconnected");
         }
     };
 
@@ -101,10 +98,17 @@ public class ClientAidlConnector {
     private IBinder.DeathRecipient deathRecipient = new IBinder.DeathRecipient() {
         @Override
         public void binderDied() {
-            Log.e(TAG,"Try to reconnect the service");
-            iServiceAidlCall.asBinder().unlinkToDeath(deathRecipient,0);
+            iServiceAidlCall.asBinder().unlinkToDeath(deathRecipient,0);//解除死亡代理
             iServiceAidlCall = null;
-            connect();
+            if(connectResult != null){
+                boolean isReconnect = connectResult.isReconnect();//连接断开回调
+                if(isReconnect){
+                    Log.e(TAG,"Try to reconnect \"" + serviceName + "\"");
+                    connect();//重连
+                }else{
+                    Log.e(TAG,"\"" + serviceName + "\" binder is dead, but does not need to be reconnected");
+                }
+            }
         }
     };
 

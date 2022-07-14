@@ -1,6 +1,7 @@
 package com.yhb.aidlmessage;
 
 import android.os.Bundle;
+import android.os.Looper;
 import android.os.RemoteException;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -15,6 +16,7 @@ import com.yhb.aidlhandler.client.ConnectResult;
 /**客户端（子进程）*/
 public class ClientActivity extends AppCompatActivity implements View.OnClickListener {
 
+    private static final String TAG = "ClientActivity";
     private ClientAidlPoster clientAidlPoster;
     private ClientAidlConnector clientAidlConnector;
 
@@ -26,19 +28,23 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
         findViewById(R.id.btn2).setOnClickListener(this);
         findViewById(R.id.btn3).setOnClickListener(this);
         findViewById(R.id.btn4).setOnClickListener(this);
-        findViewById(R.id.btn5).setOnClickListener(this);
 
         //创建连接
         clientAidlConnector = new ClientAidlConnector
                 .Builder()
                 .context(this)
                 .packageName("com.yhb.aidlmessage")//连接服务的包名
-                .serviceName("com.yhb.aidlmessage.MyService")//服务的name,也就是在AndroidManifest.xml中service标签下的name属性
+                .serviceName("com.yhb.aidlmessage.MyService")//服务的name,也就是在AndroidManifest.xml内service中action标签的name属性
                 .connectResult(new ConnectResult() {//连接回调
                     @Override
-                    public void onResult(ClientAidlPoster poster) {
+                    public void connected(ClientAidlPoster poster) {
                         //远程调用需要使用该发送者对象
                         clientAidlPoster = poster;
+                    }
+                    @Override
+                    public boolean isReconnect() {
+                        //连接异常断开回调
+                        return true;//true:重连 false:不重连
                     }
                 })
                 .build();
@@ -51,8 +57,10 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
     IClientAidlCall.Stub clientAidlCall = new IClientAidlCall.Stub() {
         @Override
         public void accept(String action, String params) throws RemoteException {
-            //回调在工作线程
-            Log.e("accept",Thread.currentThread().getName());
+            Log.e(TAG,"accept ThreadName: " + Thread.currentThread().getName());
+            if(Looper.getMainLooper().getThread() == Thread.currentThread()){//判断是否在主线程
+                Toast.makeText(ClientActivity.this,"action: " + action + "\nparams: " + params,Toast.LENGTH_SHORT).show();
+            }
         }
     };
 
@@ -69,45 +77,27 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
                 clientAidlPoster.unregister(clientAidlCall);
                 break;
             case R.id.btn3:
-                //串行调用
-                clientAidlPoster.onewayPost("111", "aaaa", new IServiceAidlCallback.Stub() {
+                //UI线程同步调用
+                clientAidlPoster.uiPost("uiPost", "{...}", new IServiceAidlCallback.Stub() {
                     @Override
-                    public void onResult(final int code, final String params) throws RemoteException {
-                        //回调在工作线程
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(ClientActivity.this,"onewayPost->onResult：{" + code + params + "}",Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                        Log.e("onewayPost->onResult","ThreadName = "+Thread.currentThread().getName());
+                    public void onResult(int code, String params) throws RemoteException {
+                        //回调在当前UI线程
+                        Toast.makeText(ClientActivity.this,"code: " + code + "\nparams: " + params,Toast.LENGTH_SHORT).show();
                     }
                 });
                 break;
             case R.id.btn4:
-                //UI线程同步调用
-                clientAidlPoster.uiPost("222", "bbbb", new IServiceAidlCallback.Stub() {
-                    @Override
-                    public void onResult(int code, String params) throws RemoteException {
-                        //回调在当前UI线程
-                        Toast.makeText(ClientActivity.this,"uiPost->onResult：{" + code + params + "}",Toast.LENGTH_SHORT).show();
-                        Log.e("uiPost->onResult",Thread.currentThread().getName());
-                    }
-                });
-                break;
-            case R.id.btn5:
                 //异步调用
-                clientAidlPoster.asynPost("333", "cccc", new IServiceAidlCallback.Stub() {
+                clientAidlPoster.asynPost("asynPost", "{...}", new IServiceAidlCallback.Stub() {
                     @Override
                     public void onResult(final int code, final String params) throws RemoteException {
                         //回调在工作线程
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(ClientActivity.this,"asynPost->onResult：{" + code + params + "}",Toast.LENGTH_SHORT).show();
+                                Toast.makeText(ClientActivity.this,"code: " + code + "\nparams: " + params,Toast.LENGTH_SHORT).show();
                             }
                         });
-                        Log.e("asynPost->onResult",Thread.currentThread().getName());
                     }
                 });
                 break;
@@ -118,8 +108,8 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
         clientAidlConnector.disconnect();
+        super.onDestroy();
     }
 
 }

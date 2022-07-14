@@ -42,9 +42,8 @@ public abstract class BaseAidlService extends Service implements ServiceAidlPost
         return serviceAidlCall;
     }
 
-    /**下发消息*/
+    /**下发广播*/
     public void doAccept(String action, String params){
-        Log.e(TAG,"doAccept");
         try {
             if(serviceAidlCall != null){
                 serviceAidlCall.accept(action,params);
