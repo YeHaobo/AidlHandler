@@ -78,7 +78,7 @@ public class MyService extends BaseAidlService {
 ```
 ### 3、Service中发送广播
 注意：在服务端使用回调发送广播时，客户端的call实现所在的线程是由服务端调用时所在线程决定的。   
-比如：客户端在UI线程同时远程调用uiPost和asynPost，服务端在uiPost内部发送广播则回调至客户端UI线程，而在asynPost内部发送广播则回调至客户端binder工作线程。   
+比如：客户端在UI线程同时远程调用uiPost和asynPost，在uiPost内部使用doAccept发送会回调至客户端UI线程，而在asynPost内部使用则回调至客户端binder工作线程。   
 ```java
       doAccept("action","params");//客户端可以根据action来判断是否需要操作
 ```
