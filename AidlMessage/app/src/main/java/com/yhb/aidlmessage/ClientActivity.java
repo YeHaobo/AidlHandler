@@ -24,37 +24,38 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
         findViewById(R.id.btn2).setOnClickListener(this);
         findViewById(R.id.btn3).setOnClickListener(this);
         findViewById(R.id.btn4).setOnClickListener(this);
-        clientAidlConnector.connect();//连接服务
+        aidlConnector.connect();//连接服务
     }
 
     @Override
     protected void onDestroy() {
-        clientAidlConnector.disconnect();//断开连接
+        aidlConnector.disconnect();//断开连接
         super.onDestroy();
     }
 
-    private ClientAidlPoster clientAidlPoster;
-
-    private ClientAidlConnector clientAidlConnector = new ClientAidlConnector
+    //客户端发送者
+    private ClientAidlPoster aidlPoster;
+    //aidl连接器
+    private ClientAidlConnector aidlConnector = new ClientAidlConnector
             .Builder()
             .context(this)
             .packageName("com.yhb.aidlmessage")//连接服务的包名
             .serviceName("com.yhb.aidlmessage.MyService")//服务的name,也就是在AndroidManifest.xml内service中action标签的name属性
             .connectResult(new ConnectResult() {
                 @Override
-                public void connected(ClientAidlPoster poster) {
+                public void connected(ClientAidlPoster poster) {//已连接回调
                     Log.e(TAG, "connected");
-                    clientAidlPoster = poster;//远程调用需要使用该发送者对象
+                    aidlPoster = poster;//远程调用需要使用该发送者对象
                 }
                 @Override
-                public boolean disconnected() {
+                public boolean disconnected() {//连接断开回调
                     Log.e(TAG, "disconnected");
                     return true;//true:重连 false:不重连
                 }
             }).build();
 
     //实例回调接口
-    IClientAidlReceive.Stub clientReceive = new IClientAidlReceive.Stub() {
+    private IClientAidlReceive.Stub clientReceive = new IClientAidlReceive.Stub() {
         @Override
         public void onReceived(String action, String params) throws RemoteException {
             Log.e("onReceived",action + " " + params);
@@ -63,16 +64,16 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
 
     @Override
     public void onClick(View v) {
-        if(clientAidlPoster == null) return;
+        if(aidlPoster == null) return;
         switch (v.getId()){
             case R.id.btn1://注册
-                clientAidlPoster.registerReceive(clientReceive);
+                aidlPoster.registerReceive(clientReceive);
                 break;
             case R.id.btn2://解注册
-                clientAidlPoster.unregisterReceive(clientReceive);
+                aidlPoster.unregisterReceive(clientReceive);
                 break;
             case R.id.btn3://阻塞调用
-                clientAidlPoster.syncPost("111", "111", new IServiceAidlResult.Stub() {
+                aidlPoster.syncPost("111", "111", new IServiceAidlResult.Stub() {
                     @Override
                     public void onResult(int code, String params) throws RemoteException {
                         Log.e("syncPost",code + " " + params);
@@ -80,7 +81,7 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
                 });
                 break;
             case R.id.btn4:
-                clientAidlPoster.asyncPost("222", "222", new IServiceAidlResult.Stub() {
+                aidlPoster.asyncPost("222", "222", new IServiceAidlResult.Stub() {
                     @Override
                     public void onResult(int code, String params) throws RemoteException {
                         Log.e("asyncPost",code + " " + params);

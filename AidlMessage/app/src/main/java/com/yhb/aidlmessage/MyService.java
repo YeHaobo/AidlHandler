@@ -34,6 +34,7 @@ public class MyService extends BaseAidlService {
         }, 5*1000);
     }
 
+    /**同步调用*/
     @Override
     public void syncPost(String action, String params, IServiceAidlResult result) {
         Log.e(TAG, "syncPost " + action + " " + params);
@@ -44,6 +45,7 @@ public class MyService extends BaseAidlService {
         }
     }
 
+    /**异步调用*/
     @Override
     public void asyncPost(String action, String params, IServiceAidlResult result) {
         Log.e(TAG, "asyncPost " + action + " " + params);
@@ -54,6 +56,7 @@ public class MyService extends BaseAidlService {
         }
     }
 
+    /**客户端注册*/
     @Override
     public void registerReceive(IClientAidlReceive receive) {
         try {
@@ -61,9 +64,9 @@ public class MyService extends BaseAidlService {
         } catch (RemoteException e) {
             e.printStackTrace();
         }
-
     }
 
+    /**客户端解注册*/
     @Override
     public void unregisterReceive(IClientAidlReceive receive) {
         try {
@@ -71,7 +74,6 @@ public class MyService extends BaseAidlService {
         } catch (RemoteException e) {
             e.printStackTrace();
         }
-
     }
 
 }
