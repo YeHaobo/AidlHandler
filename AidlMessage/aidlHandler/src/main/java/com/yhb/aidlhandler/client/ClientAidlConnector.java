@@ -7,10 +7,12 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
-import com.yhb.aidlhandler.IServiceAidlCall;
+import com.yhb.aidlhandler.IServiceAidl;
 
 /**连接者*/
 public class ClientAidlConnector {
+
+    /**TAG*/
     private static final String TAG = "ClientAidlConnector";
 
     /**上下文*/
@@ -22,7 +24,7 @@ public class ClientAidlConnector {
     /**连接回调*/
     private ConnectResult connectResult;
     /**已绑定服务端接口*/
-    private IServiceAidlCall iServiceAidlCall;
+    private IServiceAidl server;
 
     /**私有构造*/
     private ClientAidlConnector(Builder builder) {
@@ -64,7 +66,7 @@ public class ClientAidlConnector {
         Intent intent = new Intent();
         ComponentName componentName = new ComponentName(packageName, serviceName);
         intent.setComponent(componentName);
-        context.bindService(intent,connection, Context.BIND_AUTO_CREATE);
+        context.bindService(intent, connection, Context.BIND_AUTO_CREATE);
     }
 
     /**断开连接*/
@@ -75,39 +77,33 @@ public class ClientAidlConnector {
     /**服务连接*/
     private ServiceConnection connection = new ServiceConnection() {
         @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            if(service == null) return;
-            iServiceAidlCall = IServiceAidlCall.Stub.asInterface(service);//binder接口转换
+        public void onServiceConnected(ComponentName name, IBinder iBinder) {
+            if(iBinder == null) return;
+            server = IServiceAidl.Stub.asInterface(iBinder);//binder接口转换
             try {
-                iServiceAidlCall.asBinder().linkToDeath(deathRecipient,0);//设置死亡代理
+                server.asBinder().linkToDeath(deathRecipient,0);//设置死亡代理
             } catch (RemoteException e) {
                 e.printStackTrace();
+                Log.e(TAG, "linkToDeath error: " + e.getMessage());
             }
             if(connectResult != null){
-                connectResult.connected(new ClientAidlPoster(iServiceAidlCall));//连接完成回调
+                connectResult.connected(new ClientAidlPoster(server));//连接完成回调
             }
-            Log.e(TAG,"\"" + serviceName + "\" is connected");
         }
         @Override
-        public void onServiceDisconnected(ComponentName name) {
-            Log.e(TAG,"\"" + serviceName + "\" is disconnected");
-        }
+        public void onServiceDisconnected(ComponentName name) { }
     };
 
     /**连接死亡代理*/
     private IBinder.DeathRecipient deathRecipient = new IBinder.DeathRecipient() {
         @Override
         public void binderDied() {
-            iServiceAidlCall.asBinder().unlinkToDeath(deathRecipient,0);//解除死亡代理
-            iServiceAidlCall = null;
-            if(connectResult != null){
-                boolean isReconnect = connectResult.isReconnect();//连接断开回调
-                if(isReconnect){
-                    Log.e(TAG,"Try to reconnect \"" + serviceName + "\"");
-                    connect();//重连
-                }else{
-                    Log.e(TAG,"\"" + serviceName + "\" binder is dead, but does not need to be reconnected");
-                }
+            server.asBinder().unlinkToDeath(deathRecipient,0);//解除死亡代理
+            server = null;
+            if(connectResult != null && connectResult.disconnected()){//连接断开回调
+                connect();//重连
+            }else{
+                disconnect();//断开连接
             }
         }
     };

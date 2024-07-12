@@ -5,5 +5,5 @@ public interface ConnectResult {
     /**连接完成回调*/
     void connected(ClientAidlPoster poster);
     /**异常断开回调，返回是否需要重连*/
-    boolean isReconnect();
+    boolean disconnected();
 }
