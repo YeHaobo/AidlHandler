@@ -82,11 +82,7 @@ public class MyService extends BaseAidlService {
 
 ### 2、在AndroidManifest.xml中注册服务
 ```java
-      <service android:name=".MyService" android:enabled="true" android:exported="true">
-          <intent-filter>
-              <action android:name="com.yhb.aidlmessage.MyService"/>
-          </intent-filter>
-      </service>
+      <service android:name=".MyService" android:enabled="true" android:exported="true"/>
 ```
 
 ### 3、向客户端发送消息  
@@ -112,8 +108,8 @@ public class MyService extends BaseAidlService {
     private ClientAidlConnector aidlConnector = new ClientAidlConnector
             .Builder()
             .context(this)
-            .packageName("com.yhb.aidlmessage")//连接服务的包名
-            .serviceName("com.yhb.aidlmessage.MyService")//服务的name,也就是在AndroidManifest.xml内service中action标签的name属性
+            .packageName("com.yhb.aidlmessage")//包名
+            .serviceName("com.yhb.aidlmessage.MyService")//服务名
             .connectResult(new ConnectResult() {
                 @Override
                 public void connected(ClientAidlPoster poster) {//已连接回调
