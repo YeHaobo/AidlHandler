@@ -19,11 +19,7 @@
 
         <activity android:name=".ClientActivity" android:process=":remoteClient"/>
 
-        <service android:name=".MyService" android:enabled="true" android:exported="true">
-            <intent-filter>
-                <action android:name="com.yhb.aidlmessage.MyService"/>
-            </intent-filter>
-        </service>
+        <service android:name=".MyService" android:enabled="true" android:exported="true"/>
 
     </application>
 

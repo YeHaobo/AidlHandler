@@ -39,8 +39,8 @@ public class ClientActivity extends AppCompatActivity implements View.OnClickLis
     private ClientAidlConnector aidlConnector = new ClientAidlConnector
             .Builder()
             .context(this)
-            .packageName("com.yhb.aidlmessage")//连接服务的包名
-            .serviceName("com.yhb.aidlmessage.MyService")//服务的name,也就是在AndroidManifest.xml内service中action标签的name属性
+            .packageName("com.yhb.aidlmessage")//包名
+            .serviceName("com.yhb.aidlmessage.MyService")//服务名
             .connectResult(new ConnectResult() {
                 @Override
                 public void connected(ClientAidlPoster poster) {//已连接回调
